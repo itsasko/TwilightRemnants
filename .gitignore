@@ -1,0 +1,44 @@
+# Unreal Engine
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vs/
+*.VC.db
+*.opensdf
+*.sdf
+*.suo
+*.xcodeproj
+*.xcworkspace
+*.xcuserdata/
+*.idea/
+*.sln
+
+# Build artifacts
+*.pdb
+*.obj
+*.log
+*.tlog
+*.ipch
+*.db
+*.idb
+
+# User-specific
+*.user
+*.userprefs
+*.sublime-workspace
+*.sublime-project
+
+# Mac
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Backup
+*.bak
+*.tmp
+
+# Assets (temporarily)
+*.uasset
+*.umap
