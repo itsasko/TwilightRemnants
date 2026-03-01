@@ -8,6 +8,7 @@
 #include "Navigation/PathFollowingComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Items/Weapons/Weapon.h"
+#include "Items/Soul.h"
 
 AEnemy::AEnemy()
 {
@@ -47,9 +48,27 @@ void AEnemy::Tick(float DeltaTime)
 
 float AEnemy::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	if (IsDead()) return 0.f;
+
 	HandleDamage(DamageAmount);
 	CombatTarget = EventInstigator->GetPawn();
-	ChaseTarget();
+
+	if (Attributes && Attributes->IsAlive())
+	{
+		if (IsInsideAttackRadius())
+		{
+			EnemyState = EEnemyState::EES_Attacking;
+		}
+		else if (IsOutsideAttackRadius())
+		{
+			ChaseTarget();
+		}
+	}
+	//else
+	//{
+	//	Die();
+	//}
+
 	return DamageAmount;
 }
 
@@ -63,38 +82,73 @@ void AEnemy::Destroyed()
 
 void AEnemy::GetHit_Implementation(const FVector& ImpactPoint, AActor* Hitter)
 {
+	if (IsDead()) return;
+
+	SetWeaponCollisionEnabled(ECollisionEnabled::NoCollision);
+	StopAttackMontage();
+
 	Super::GetHit_Implementation(ImpactPoint, Hitter);
 	if (!IsDead()) ShowHealthBar();
 	ClearPatrolTimer();
+	ClearAttackTimer();
+
+	if (IsInsideAttackRadius())
+	{
+		if (!IsDead()) StartAttackTimer();
+	}
 }
 
 void AEnemy::BeginPlay()
 {
 	Super::BeginPlay();
+	Tags.Add(FName("Enemy"));
 	if (PawnSensing)
 	{
+		PawnSensing->OnSeePawn.RemoveDynamic(this, &AEnemy::PawnSeen);
 		PawnSensing->OnSeePawn.AddDynamic(this, &AEnemy::PawnSeen);
 	}
 	InitializeEnemy();
-	Tags.Add(FName("Enemy"));
 }
 
-void AEnemy::Die()
+void AEnemy::Die_Implementation()
 {
+	Super::Die_Implementation();
+
 	EnemyState = EEnemyState::EES_Dead;
-	PlayDeathMontage();
 	ClearAttackTimer();
 	HideHealthBar();
 	DisableCapsule();
-	SetLifeSpan(20.0f);
+	SetLifeSpan(DeathLifeSpan);
 	GetCharacterMovement()->bOrientRotationToMovement = false;
 	SetWeaponCollisionEnabled(ECollisionEnabled::NoCollision);
+	if (EnemyController)
+	{
+		EnemyController->StopMovement();
+	}
+	SpawnSoul();
+}
+
+void AEnemy::SpawnSoul()
+{
+	UWorld* World = GetWorld();
+	if (World && SoulClass && Attributes)
+	{
+		const FVector SpawnLocation = GetActorLocation() + FVector(0.f, 0.f, 50.f);
+		ASoul* SpawnedSoul = World->SpawnActor<ASoul>(SoulClass, SpawnLocation, GetActorRotation());
+		if (SpawnedSoul)
+		{
+			SpawnedSoul->SetSouls(Attributes->GetSouls());
+			SpawnedSoul->SetOwner(this);
+		}
+	}
 }
 
 void AEnemy::Attack()
 {
-	EnemyState = EEnemyState::EES_Engaged;
 	Super::Attack();
+	if (CombatTarget == nullptr) return;
+	EnemyState = EEnemyState::EES_Engaged;
+	GetCharacterMovement()->bOrientRotationToMovement = false;
 	PlayAttackMontage();
 }
 
@@ -111,6 +165,7 @@ bool AEnemy::CanAttack()
 void AEnemy::AttackEnd()
 {
 	EnemyState = EEnemyState::EES_NoState;
+	GetCharacterMovement()->bOrientRotationToMovement = true;
 	CheckCombatTarget();
 }
 
@@ -126,10 +181,9 @@ void AEnemy::HandleDamage(float DamageAmount)
 
 void AEnemy::InitializeEnemy()
 {
-
 	EnemyController = Cast<AAIController>(GetController());
-	HideHealthBar();
 	MoveToTarget(PatrolTarget);
+	HideHealthBar();
 	SpawnDefaultWeapon();
 }
 
@@ -165,18 +219,6 @@ void AEnemy::CheckCombatTarget()
 void AEnemy::PatrolTimerFinished()
 {
 	MoveToTarget(PatrolTarget);
-}
-
-int32 AEnemy::PlayDeathMontage()
-{
-	const int32 Selection = Super::PlayDeathMontage();
-	TEnumAsByte<EDeathPose> Pose(Selection);
-	if (Pose < EDeathPose::EDP_MAX)
-	{
-		DeathPose = static_cast<EDeathPose>(Pose);
-	}
-
-	return Selection;
 }
 
 void AEnemy::HideHealthBar()
@@ -276,14 +318,11 @@ bool AEnemy::InTargetRange(AActor* Target, double Radius)
 
 void AEnemy::MoveToTarget(AActor* Target)
 {
-	if (EnemyController == nullptr || Target == nullptr) return;
-	if (EnemyController && PatrolTarget)
-	{
-		FAIMoveRequest MoveRequest;
-		MoveRequest.SetGoalActor(Target);
-		MoveRequest.SetAcceptanceRadius(60.f);
-		EnemyController->MoveTo(MoveRequest);
-	}
+	if (EnemyController == nullptr || Target == nullptr || IsDead()) return;
+	FAIMoveRequest MoveRequest;
+	MoveRequest.SetGoalActor(Target);
+	MoveRequest.SetAcceptanceRadius(AcceptanceRadius);
+	EnemyController->MoveTo(MoveRequest);
 }
 
 AActor* AEnemy::ChoosePatrolTarget()
@@ -297,11 +336,11 @@ AActor* AEnemy::ChoosePatrolTarget()
 		}
 	}
 
-	const int32 NumOfPatrolTargets = PatrolTargets.Num();
+	const int32 NumOfPatrolTargets = ValidTargets.Num();
 	if (NumOfPatrolTargets > 0)
 	{
 		const int32 TargetSelection = FMath::RandRange(0, NumOfPatrolTargets - 1);
-		return PatrolTargets[TargetSelection];
+		return ValidTargets[TargetSelection];
 	}
 	return nullptr;
 }
@@ -312,7 +351,7 @@ void AEnemy::SpawnDefaultWeapon()
 	if (World && WeaponClass)
 	{
 		AWeapon* DefaultWeapon = World->SpawnActor<AWeapon>(WeaponClass);
-		DefaultWeapon->Equip(GetMesh(), FName("RightHandSocket"), this, this);
+		DefaultWeapon->Equip(GetMesh(), FName("WeaponSocket"), this, this);
 		EquippedWeapon = DefaultWeapon;
 	}
 }
@@ -323,7 +362,8 @@ void AEnemy::PawnSeen(APawn* SeenPawn)
 		EnemyState != EEnemyState::EES_Dead &&
 		EnemyState != EEnemyState::EES_Chasing &&
 		EnemyState < EEnemyState::EES_Attacking &&
-		SeenPawn->ActorHasTag(FName("EngagebleTarget"));
+		SeenPawn->ActorHasTag(FName("EngagebleTarget")) &&
+		!SeenPawn->ActorHasTag(FName("Dead"));
 
 	if (bShouldChaseTarget)
 	{

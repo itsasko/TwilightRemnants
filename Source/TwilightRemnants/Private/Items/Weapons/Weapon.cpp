@@ -31,15 +31,18 @@ void AWeapon::Equip(USceneComponent* InParent, FName InSocketName, AActor* NewOw
 	SetInstigator(NewInstigator);
 	AttachMeshToSocket(InParent, InSocketName);
 	DisableSphereCollision();
-	PlayEquipSound();
+	if (!NewOwner->ActorHasTag(FName(TEXT("Enemy"))))
+	{
+		PlayEquipSound();
+	}
 	DiactivateEmbers();
 }
 
 void AWeapon::DiactivateEmbers()
 {
-	if (EmbersEffect)
+	if (ItemEffect)
 	{
-		EmbersEffect->Deactivate();
+		ItemEffect->Deactivate();
 	}
 }
 
@@ -119,10 +122,10 @@ void AWeapon::BoxTrace(FHitResult& BoxHit)
 		ActorsToIgnore.AddUnique(GetOwner());
 	}
 
-	for (AActor* Actor : IgnoredActors)
-	{
-		ActorsToIgnore.AddUnique(Actor);
-	}
+	//for (AActor* Actor : IgnoredActors)
+	//{
+	//	ActorsToIgnore.AddUnique(Actor);
+	//}
 
 	UKismetSystemLibrary::BoxTraceSingle(
 		this,

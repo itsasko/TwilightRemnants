@@ -38,7 +38,3 @@ Thumbs.db
 # Backup
 *.bak
 *.tmp
-
-# Assets (temporarily)
-*.uasset
-*.umap

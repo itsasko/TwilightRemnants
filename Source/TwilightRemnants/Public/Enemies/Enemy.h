@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Characters/BaseCharacter.h"
-#include "Characters/CharacterTypes.h"
 #include "Enemy.generated.h"
 
 class UHealthBarComponent;
@@ -30,21 +29,16 @@ protected:
 	virtual void BeginPlay() override;
 
 	// <ABaseCharacter> overrides
-	virtual void Die() override;
+	virtual void Die_Implementation() override;
+	void SpawnSoul();
 	virtual void Attack() override;
 	virtual bool CanAttack() override;
 	virtual void HandleDamage(float DamageAmount) override;
-	virtual int32 PlayDeathMontage() override;
 	virtual void AttackEnd() override;
-
-	UPROPERTY(BlueprintReadOnly)
-	TEnumAsByte<EDeathPose> DeathPose;
 
 	UPROPERTY(BlueprintReadOnly)
 	EEnemyState EnemyState = EEnemyState::EES_Patrolling;
 
-	UPROPERTY(BlueprintReadOnly, Category = Combat)
-	AActor* CombatTarget;
 private:
 	// AI Behavior
 	void InitializeEnemy();
@@ -83,11 +77,14 @@ private:
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<class AWeapon> WeaponClass;
 
-	UPROPERTY()
-	double CombatRadius = 1000.f;
+	UPROPERTY(EditAnywhere, Category = Combat)
+	double CombatRadius = 500.f;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = Combat)
 	double AttackRadius = 150.f;
+
+	UPROPERTY(EditAnywhere, Category = Combat)
+	double AcceptanceRadius = 50.f;
 
 	UPROPERTY()
 	class AAIController* EnemyController;
@@ -125,4 +122,7 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = Combat)
 	float DeathLifeSpan = 9.f;
+
+	UPROPERTY(EditAnywhere, Category = Combat)
+	TSubclassOf<class ASoul> SoulClass;
 };
