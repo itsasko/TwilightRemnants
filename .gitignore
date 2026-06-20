@@ -1,0 +1,101 @@
+# =============================================================================
+# Unreal Engine 5 — C++ + Blueprints Portfolio .gitignore
+# Keeps: Source/, Config/, *.uproject, custom Plugins/ source
+# Excludes: all Content assets, binaries, generated files
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# Generated & build output
+# -----------------------------------------------------------------------------
+Binaries/
+Build/
+Intermediate/
+Saved/
+DerivedDataCache/
+FileOpenOrder/
+PipelineCaches/
+
+
+# -----------------------------------------------------------------------------
+# Content — exclude everything
+# Blueprints (.uasset) are binary and not readable anyway;
+# link your YouTube video instead.
+# -----------------------------------------------------------------------------
+Content/
+
+
+# -----------------------------------------------------------------------------
+# Plugins — exclude built/marketplace plugins, keep custom source
+# If you have a custom plugin with C++ source, un-comment the exception below:
+# !Plugins/MyCustomPlugin/Source/
+# !Plugins/MyCustomPlugin/MyCustomPlugin.uplugin
+# -----------------------------------------------------------------------------
+Plugins/
+
+
+# -----------------------------------------------------------------------------
+# Visual Studio
+# -----------------------------------------------------------------------------
+.vs/
+*.sln
+*.suo
+*.user
+*.VC.db
+*.VC.opendb
+*.opensdf
+*.sdf
+*.sln
+*.ncb
+
+
+# -----------------------------------------------------------------------------
+# Rider / CLion
+# -----------------------------------------------------------------------------
+.idea/
+cmake-build-*/
+*.iml
+
+
+# -----------------------------------------------------------------------------
+# VS Code
+# -----------------------------------------------------------------------------
+.vscode/
+
+
+# -----------------------------------------------------------------------------
+# OS junk
+# -----------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+
+# -----------------------------------------------------------------------------
+# Crash dumps & logs (also covered by Saved/, but just in case)
+# -----------------------------------------------------------------------------
+*.dmp
+*.log
+
+
+# -----------------------------------------------------------------------------
+# Packaging output
+# -----------------------------------------------------------------------------
+dist/
+Package/
+Packaged/
+WindowsNoEditor/
+LinuxNoEditor/
+MacNoEditor/
+
+
+# =============================================================================
+# WHAT IS KEPT (not ignored):
+#
+#   Source/          — all C++ headers and implementation files
+#   Config/          — DefaultEngine.ini, DefaultGame.ini, etc.
+#   *.uproject       — project descriptor
+#   .gitignore       — this file
+#   README.md        — your portfolio page
+#
+# =============================================================================
